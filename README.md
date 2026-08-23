@@ -99,24 +99,22 @@ GitHub Issues を SoT として、今日やるタスクを対話形式で決め�
 
 ディレクトリ構成
 
+リポジトリはレイヤーで切る。詳細な設計原則・命名規約・拡張ルールは governance/repo-structure.md が SoT。
+
 ```
-├── README.md
-├── prompts/
-│   ├── morning.md
-│   ├── evening.md
-│   ├── daily-report.md
-│   ├── weekly-review.md
-│   └── monthly-review.md
-├── templates/
-│   ├── issue-daily.md
-│   ├── issue-task.md
-│   ├── issue-weekly.md
-│   └── issue-monthly.md
-└── docs/
-    ├── labels.md
-    ├── workflow.md
-    └── prompt-improvements.md
+├── README.md            # 入口
+├── governance/          # 憲法層：運用ルール・構造定義・ラベル設計
+├── decisions/           # 決定層：確定した意思決定の記録（連番・不変・Append-only）
+├── knowledge/           # 事実層：確定済みで現在有効な参照情報（必要になったらドメイン別に作る）
+├── prompts/             # 実行層：生成AIに渡す運用プロンプト
+└── templates/           # 型層：Issue・決定記録などのテンプレート
 ```
+
+運用の基本：
+
+* 検討・議論は Issue と AI セッションで行い、リポジトリには載せない
+* リポジトリに載るのは「確定したもの」だけ
+* 意思決定は decisions/ に決定記録（templates/decision-record.md）として積む。覆すときは新しい番号で上書きせず追加する
 
 運用ルール
 

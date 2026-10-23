@@ -228,8 +228,8 @@ const commands = {
   async put(opts) {
     const local = opts._[0] ?? fail("アップロードするローカルファイルを指定してください");
     const content = await readFile(local);
-    const mime = opts.mime || MIME_BY_EXT[extname(local).toLowerCase()] || "application/octet-stream";
     const name = opts.name || basename(local);
+    const mime = opts.mime || MIME_BY_EXT[extname(name).toLowerCase()] || "application/octet-stream";
 
     let target;
     if (opts.id) {

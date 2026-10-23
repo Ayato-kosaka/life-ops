@@ -83,6 +83,7 @@ life-ops/
 - **汎用の機能は共通部品にし、スキルからは呼ぶだけにする。** スキルに外部連携を直接作り込まない。
   - Google Drive の読み書き：`tools/gdrive/`（CLI）＋ `.github/actions/gdrive/`（Actions 用ラッパー）
   - 本人への通知・GitHub 上のメッセージ代行：`.github/workflows/github-message.yml`（使い方は `CLAUDE.md`）
+  - セッション（認証情報なし）から Drive を使う：`.github/workflows/gdrive.yml` ＋ 入出力の暗号化 `tools/sealbox/`
 - 業務データ（請求書など）や個人情報は Google Drive に置き、リポジトリにはコードと手順だけを置く。
 - 公開リポジトリのため、Actions のログ・Step Summary にも業務データを出さない。
 

@@ -106,10 +106,15 @@ GitHub Issues を SoT として、今日やるタスクを対話形式で決め�
 ├── governance/          # 憲法層：運用ルール・構造定義・ラベル設計
 ├── decisions/           # 決定層：確定した意思決定の記録（連番・不変・Append-only）
 ├── knowledge/           # 事実層：確定済みで現在有効な参照情報（更新型）
+│   ├── assets/          # 持ち物・機材の仕様、選び方、購入履歴
 │   ├── legal/           # 税務ポジション・法人・EXIT設計
 │   └── platform/        # 外部サービスの事業体要件・決済レール
 ├── prompts/             # 実行層：生成AIに渡す運用プロンプト
-└── templates/           # 型層：Issue・決定記録などのテンプレート
+├── templates/           # 型層：Issue・決定記録などのテンプレート
+├── tools/               # 道具層：スキルや Actions から共通で呼ぶ自動化コード（gdrive 等）
+├── CLAUDE.md            # AIエージェント向けの運用ルール（通知の方法など）
+├── .claude/skills/      # Claude Code スキル（invoice：請求書作成）
+└── .github/             # GitHub Actions（github-message：Bot によるメッセージ代行／gdrive）
 ```
 
 運用の基本：

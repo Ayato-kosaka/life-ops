@@ -1,0 +1,75 @@
+/* 参考請求書（xlsx）のレイアウトを踏襲: 罫線 #595959、見出し塗り #F2F2F2、強調塗り #D9D9D9 */
+:root {
+  --line: #595959;
+  --fill: #f2f2f2;
+  --fill-strong: #d9d9d9;
+  --muted: #808080;
+}
+* { box-sizing: border-box; }
+html { -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+body {
+  margin: 0;
+  font-family: "BIZ UDPGothic", "Yu Gothic", "YuGothic", "Hiragino Sans", "IPAGothic", sans-serif;
+  font-size: 10pt;
+  color: #000;
+  line-height: 1.45;
+}
+table { border-collapse: collapse; width: 100%; }
+th, td { font-weight: normal; text-align: left; vertical-align: middle; }
+
+.title { text-align: center; margin-bottom: 14px; }
+.title h1 { font-size: 24pt; font-weight: 700; margin: 0; letter-spacing: 0.1em; }
+.title .en { font-size: 9pt; color: var(--muted); letter-spacing: 0.2em; }
+
+.meta { width: auto; margin-left: auto; margin-bottom: 14px; }
+.meta th { text-align: right; padding: 1px 4px; }
+.meta td { padding: 1px 0 1px 4px; min-width: 9.5em; }
+
+.parties { display: flex; gap: 24px; margin-bottom: 16px; }
+.party { flex: 1; }
+.party .label {
+  background: var(--fill);
+  border: 1px solid var(--line);
+  font-size: 9pt;
+  font-weight: 700;
+  text-align: center;
+  padding: 2px;
+  margin-bottom: 6px;
+}
+.client-company { font-size: 13pt; font-weight: 700; }
+.client-person { font-size: 11pt; }
+.issuer-name { font-size: 12pt; font-weight: 700; }
+.small { font-size: 9pt; }
+.note { font-size: 8pt; color: var(--muted); margin-top: 2px; }
+
+.amount { margin-bottom: 14px; }
+.amount th, .amount td { border: 1px solid var(--line); height: 45px; }
+.amount th { background: var(--fill-strong); font-size: 11pt; font-weight: 700; text-align: center; width: 56.8%; }
+.amount td { font-size: 20pt; font-weight: 700; text-align: center; }
+
+.subject { margin-bottom: 14px; }
+.subject th, .subject td { border: 1px solid var(--line); padding: 4px 6px; }
+.subject th { background: var(--fill); font-size: 9pt; font-weight: 700; text-align: center; width: 6.3%; white-space: nowrap; }
+
+.lines { margin-bottom: 14px; }
+.lines th, .lines td { border: 1px solid var(--line); padding: 4px 6px; }
+.lines thead th { background: var(--fill-strong); font-size: 9pt; font-weight: 700; text-align: center; }
+.lines .c { text-align: center; }
+.lines .r { text-align: right; white-space: nowrap; }
+.lines tr.line td { height: 26px; }
+.lines tr.sum td { text-align: right; }
+.lines tr.strong td { font-weight: 700; }
+.lines tr.spacer td { border: none; height: 10px; padding: 0; }
+.lines tr.section td, .info tr.section td {
+  background: var(--fill);
+  font-size: 9pt;
+  font-weight: 700;
+  border: 1px solid var(--line);
+  padding: 3px 6px;
+}
+.lines tr.grand td { background: var(--fill-strong); font-size: 13pt; font-weight: 700; text-align: right; height: 37px; }
+
+.info { margin-bottom: 14px; }
+.info th, .info td { border: 1px solid var(--line); padding: 4px 6px; }
+.info th { font-size: 9pt; font-weight: 700; text-align: center; white-space: nowrap; }
+.notes td { font-size: 9pt; }

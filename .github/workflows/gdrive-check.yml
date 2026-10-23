@@ -1,0 +1,42 @@
+# Google Drive 連携（Secrets と .github/actions/gdrive）の疎通確認。
+# 公開リポジトリのため、アカウント名やファイル名はログに出さず件数だけ表示する。
+name: gdrive-check
+
+on:
+  workflow_dispatch:
+    inputs:
+      folder:
+        description: 一覧を取得するフォルダID（任意）
+        default: ""
+
+permissions:
+  contents: read
+
+jobs:
+  check:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - id: whoami
+        uses: ./.github/actions/gdrive
+        with:
+          command: whoami
+          client-id: ${{ secrets.GDRIVE_CLIENT_ID }}
+          client-secret: ${{ secrets.GDRIVE_CLIENT_SECRET }}
+          refresh-token: ${{ secrets.GDRIVE_REFRESH_TOKEN }}
+      - id: ls
+        if: inputs.folder != ''
+        uses: ./.github/actions/gdrive
+        with:
+          command: ls
+          folder: ${{ inputs.folder }}
+          client-id: ${{ secrets.GDRIVE_CLIENT_ID }}
+          client-secret: ${{ secrets.GDRIVE_CLIENT_SECRET }}
+          refresh-token: ${{ secrets.GDRIVE_REFRESH_TOKEN }}
+      - env:
+          LS: ${{ steps.ls.outputs.result }}
+        run: |
+          echo "認証OK" >> "$GITHUB_STEP_SUMMARY"
+          if [[ -n "$LS" ]]; then
+            echo "フォルダ内のアイテム数: $(jq length <<< "$LS")" >> "$GITHUB_STEP_SUMMARY"
+          fi

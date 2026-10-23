@@ -1,0 +1,39 @@
+{
+  "number": "INV-20260101-001",
+  "issueDate": "2026-01-01",
+  "dueDate": "2026-01-15",
+  "dueNote": "※検収完了日（2026年1月1日）の翌日から起算して14日目",
+  "subject": "サンプル機能の開発",
+  "client": {
+    "company": "株式会社サンプル",
+    "person": "山田 太郎 様",
+    "postalCode": "100-0001",
+    "address": "東京都千代田区千代田1-1"
+  },
+  "issuer": {
+    "name": "請求 太郎",
+    "address": "東京都港区サンプル1-2-3",
+    "registrationNumber": null
+  },
+  "bank": {
+    "bankName": "サンプル銀行",
+    "branch": "本店",
+    "accountType": "普通",
+    "accountNumber": "0000000",
+    "accountHolder": "セイキュウ タロウ"
+  },
+  "taxRate": 0.1,
+  "taxRounding": "round",
+  "itemsTotalLabel": "業務委託料 計（税込）",
+  "items": [
+    { "description": "サンプル機能開発　業務委託料", "qty": 1, "unit": "式", "unitPrice": 100000 }
+  ],
+  "expenses": [
+    { "description": "クラウド利用料（2025年12月分）", "qty": 1, "unit": "式", "unitPrice": 1234 }
+  ],
+  "notes": [
+    "当方は適格請求書発行事業者ではなく、本請求書は適格請求書に該当しません。",
+    "振込手数料はご請求先にてご負担ください。",
+    "立替経費は実費（税込）による精算のため、消費税の課税対象外として計上しています。"
+  ]
+}

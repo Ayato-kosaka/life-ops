@@ -1,6 +1,6 @@
 # 0002. Google Drive 連携は個人アカウントの OAuth リフレッシュトークンで行い、業務データは Drive に置く
 
-- ステータス: 提案中
+- ステータス: 承認
 - 決定日: 2026-10-23
 - 関連: [life-ops#102](https://github.com/Ayato-kosaka/life-ops/issues/102)
 - 前提が変わったら見直す条件: Google Workspace（共有ドライブ）を個人業務で使うようになった／リポジトリを非公開にした／OAuth の失効が頻発する

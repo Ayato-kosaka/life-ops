@@ -1,0 +1,72 @@
+# Google Drive の読み書き（tools/gdrive/gdrive.mjs のラッパー）。
+# 利用側で actions/checkout が必要。コマンドと引数の意味は tools/gdrive/README.md を参照。
+# 公開リポジトリのため、結果はログに出さず outputs.result（JSON）にだけ返す。
+name: gdrive
+description: Read and write Google Drive files via tools/gdrive/gdrive.mjs
+inputs:
+  command:
+    description: whoami | ls | stat | get | put | mkdir | trash
+    required: true
+  file:
+    description: put するローカルファイル
+    default: ""
+  folder:
+    description: 起点フォルダID
+    default: ""
+  path:
+    description: 起点フォルダからの相対パス
+    default: ""
+  id:
+    description: ファイルID
+    default: ""
+  name:
+    description: put 時のファイル名
+    default: ""
+  mime:
+    description: put 時の MIME タイプ
+    default: ""
+  out:
+    description: get の保存先ローカルパス
+    default: ""
+  export:
+    description: Google ドキュメント類を get するときの出力 MIME タイプ
+    default: ""
+  client-id:
+    required: true
+  client-secret:
+    required: true
+  refresh-token:
+    required: true
+outputs:
+  result:
+    description: コマンド結果（JSON）
+    value: ${{ steps.run.outputs.result }}
+runs:
+  using: composite
+  steps:
+    - id: run
+      shell: bash
+      env:
+        GDRIVE_CLIENT_ID: ${{ inputs.client-id }}
+        GDRIVE_CLIENT_SECRET: ${{ inputs.client-secret }}
+        GDRIVE_REFRESH_TOKEN: ${{ inputs.refresh-token }}
+        IN_COMMAND: ${{ inputs.command }}
+        IN_FILE: ${{ inputs.file }}
+        IN_FOLDER: ${{ inputs.folder }}
+        IN_PATH: ${{ inputs.path }}
+        IN_ID: ${{ inputs.id }}
+        IN_NAME: ${{ inputs.name }}
+        IN_MIME: ${{ inputs.mime }}
+        IN_OUT: ${{ inputs.out }}
+        IN_EXPORT: ${{ inputs.export }}
+      run: |
+        set -euo pipefail
+        args=("$IN_COMMAND")
+        if [[ -n "$IN_FILE" ]]; then args+=("$IN_FILE"); fi
+        for key in folder path id name mime out export; do
+          var="IN_${key^^}"
+          if [[ -n "${!var}" ]]; then args+=("--$key" "${!var}"); fi
+        done
+        result=$(node "$GITHUB_ACTION_PATH/../../../tools/gdrive/gdrive.mjs" "${args[@]}")
+        delim="GDRIVE_$(openssl rand -hex 8)"
+        { echo "result<<$delim"; echo "$result"; echo "$delim"; } >> "$GITHUB_OUTPUT"

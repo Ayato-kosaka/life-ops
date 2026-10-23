@@ -1,0 +1,96 @@
+# GitHub 上のメッセージ代行。github-actions[bot] として投稿する。
+# 本人のトークンで自分をメンションしても通知されないため、AIエージェントや他の自動化が
+# 本人に通知したいときはこのワークフローを経由する。
+#
+# 呼び出し方:
+#   Claude Code（クラウド）: GitHub MCP の actions_run_trigger（workflow_id: github-message.yml, ref: main）
+#   ローカル:               gh workflow run github-message.yml -f issue=102 -f body="..."
+#   他のワークフロー:        jobs.<id>.uses: ./.github/workflows/github-message.yml
+#
+# 公開リポジトリなので、body に個人情報・金額・口座情報・非公開URLを含めないこと。
+name: github-message
+
+on:
+  workflow_dispatch:
+    inputs:
+      action:
+        description: 実行する操作
+        type: choice
+        options: [comment]
+        default: comment
+      issue:
+        description: 対象の Issue / PR 番号
+        required: true
+      body:
+        description: 本文（Markdown）
+        required: true
+      mention:
+        description: メンション先（カンマ区切り）。空ならリポジトリオーナー、none でメンションなし
+        default: ""
+      dedupe-key:
+        description: 重複防止キー。同じキーのコメントが既にあれば投稿しない
+        default: ""
+  workflow_call:
+    inputs:
+      action:
+        type: string
+        default: comment
+      issue:
+        type: string
+        required: true
+      body:
+        type: string
+        required: true
+      mention:
+        type: string
+        default: ""
+      dedupe-key:
+        type: string
+        default: ""
+
+permissions:
+  issues: write
+  pull-requests: write
+
+jobs:
+  message:
+    runs-on: ubuntu-latest
+    steps:
+      - name: comment
+        if: inputs.action == 'comment'
+        env:
+          GH_TOKEN: ${{ github.token }}
+          REPO: ${{ github.repository }}
+          OWNER: ${{ github.repository_owner }}
+          ISSUE: ${{ inputs.issue }}
+          BODY: ${{ inputs.body }}
+          MENTION: ${{ inputs.mention }}
+          DEDUPE_KEY: ${{ inputs.dedupe-key }}
+        run: |
+          set -euo pipefail
+          [[ "$ISSUE" =~ ^[0-9]+$ ]] || { echo "::error::issue は番号で指定してください: $ISSUE"; exit 1; }
+
+          marker=""
+          if [[ -n "$DEDUPE_KEY" ]]; then
+            marker="<!-- github-message:${DEDUPE_KEY} -->"
+            existing=$(gh api --paginate "repos/$REPO/issues/$ISSUE/comments" --jq '.[].body')
+            if grep -qF -- "$marker" <<< "$existing"; then
+              echo "dedupe-key '$DEDUPE_KEY' のコメントが既にあるためスキップしました" >> "$GITHUB_STEP_SUMMARY"
+              exit 0
+            fi
+          fi
+
+          case "$MENTION" in
+            none) mentions="" ;;
+            "")   mentions="@$OWNER" ;;
+            *)    mentions=$(echo "$MENTION" | tr ',' '\n' | sed 's/^ *@*//; s/ *$//' | grep -v '^$' | sed 's/^/@/' | paste -sd' ' -) ;;
+          esac
+
+          {
+            if [[ -n "$mentions" ]]; then printf '%s\n\n' "$mentions"; fi
+            printf '%s\n' "$BODY"
+            if [[ -n "$marker" ]]; then printf '\n%s\n' "$marker"; fi
+          } > body.md
+
+          url=$(gh api "repos/$REPO/issues/$ISSUE/comments" -F body=@body.md --jq '.html_url')
+          echo "コメントを投稿しました: $url" >> "$GITHUB_STEP_SUMMARY"

@@ -33,7 +33,7 @@
 
 ## 影響と実行
 
-- 初回のみ、本人が Google Cloud で OAuth クライアントを作りリフレッシュトークンを取得して登録する（手順: `tools/gdrive/README.md`）。
+- 初回のみ、本人が Google Cloud で OAuth クライアントを作りリフレッシュトークンを取得して登録する（手順は [life-ops#103](https://github.com/Ayato-kosaka/life-ops/issues/103)）。
 - Drive 連携が必要な今後の自動化は `tools/gdrive/` と `.github/actions/gdrive/` を使い、足りない操作はそこに追加する。
 - 通知が必要な今後の自動化は `github-message` を使う（`CLAUDE.md`）。
 

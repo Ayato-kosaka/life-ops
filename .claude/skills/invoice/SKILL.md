@@ -44,14 +44,19 @@ Drive 操作は `node tools/gdrive/gdrive.mjs`（以下 `gdrive`）で行う。�
   "clients": {
     "<英数字のキー>": {
       "company": "", "person": "〇〇 様", "postalCode": "", "address": "",
-      "due": { "days": 14, "from": "acceptance", "note": "※検収完了日（{base}）の翌日から起算して{days}日目" }
+      "due": { "rule": "next-month-end" }
     }
   }
 }
 ```
 
-- `due.from`: `acceptance`（検収完了日起点）または `issue`（請求日起点）。支払期日 = 起点日 + `days` 日。
-- `note` の `{base}` は起点日（例: 2026年10月9日）、`{days}` は日数に置き換える。
+`due`（支払期日の既定ルール。依頼で指定があればそちらを優先し、新しい条件が今後も続くなら profile を更新する）:
+
+| rule | 支払期日 | dueNote |
+|---|---|---|
+| `next-month-end` | 請求日の翌月末日 | なし |
+| `month-end` | 請求日の当月末日 | なし |
+| `days`（`days`, `from`） | 起点日 + `days` 日。`from` は `issue`（請求日）か `acceptance`（検収完了日） | `acceptance` のとき `※検収完了日（2026年10月9日）の翌日から起算して14日目` の形で書く |
 
 ### invoices/<番号>.json
 
@@ -68,6 +73,7 @@ Drive 操作は `node tools/gdrive/gdrive.mjs`（以下 `gdrive`）で行う。�
 
 1. `gdrive whoami` で認証を確認する。失敗したら PDF 生成までは進め、PDF をユーザーに渡したうえで
    「Drive 認証が未設定のためアップロードできない」と伝える（成功通知は送らない）。
+   認証の設定・再設定がユーザー作業として必要なら、その Issue（初回設定は #103）に手順を書いて通知する。
 2. `gdrive get --folder $ROOT --path _data/profile.json --out <work>/profile.json` で再利用情報を読む。
    無ければ請求元・口座情報をヒアリングして作る。
 3. `gdrive ls --folder $ROOT --path _data/invoices` で既存の請求データを確認する。同じ請求先の直近の請求があれば
@@ -77,18 +83,33 @@ Drive 操作は `node tools/gdrive/gdrive.mjs`（以下 `gdrive`）で行う。�
 
 profile と直近の請求から埋まるものは聞かない。毎回聞く必要があるのは通常これだけ:
 
-- 請求先（既知の請求先なら名前だけで特定する）
-- 件名と明細（内容・数量・単価）
+- 請求先（既知の請求先なら名前だけで特定する。表記ゆれは profile の請求先に寄せる）
+- 対象月・件名と明細（内容・数量・単価）
 - 立替経費の有無と内訳
-- 検収完了日（`due.from` が `acceptance` の場合）
 
-請求日は指定がなければ今日。新しい請求先・変わった情報は profile に反映する。
-質問はまとめて一度に聞き、推測で埋めた値は実行前の要約で明示する。
+既定値（聞かずに決める）:
+
+- 請求日: 今日
+- 支払期日: profile の `due`。検収完了日は**依頼で指定された場合だけ**使う（聞かない）
+- 金額: 「税込30万」のように税込で指定されたら `itemsTaxIncluded: true` にして単価に税込額を書く
+  （税抜換算と消費税は `render.mjs` が計算し、税込額に必ず一致させる）。「税抜」と言われたら `false`
+- 立替経費の月表記: 指定がなければ請求の対象月
+- 備考: profile の `defaults.notes`。立替経費が無い請求では立替経費についての行を外す
+
+依頼の内容で埋まらない必須項目があるときだけ、まとめて一度に聞く。推測で埋めた値は報告時に明示する。
+新しい請求先・変わった情報は profile に反映する。
+
+#### 依頼の例
+
+> テクノロッキーの10月分の請求書作って。・税込30万固定給 ・翌月末払い　経費 ・Claude code 27,437
+
+→ 請求先 `techno-rocky`、件名 `業務委託料（2026年10月分）`、明細 `業務委託料（2026年10月分・月額固定）` 1式 300,000（`itemsTaxIncluded: true`）、
+支払期日は請求日の翌月末、立替経費 `Claude Code 利用料（2026年10月分）` 1式 27,437。質問せずに最後まで実行する。
 
 ### 3. 請求データを作る
 
 - 番号: `INV-<請求日YYYYMMDD>-<連番3桁>`。連番は `_data/invoices/` にある同じ日付の番号の最大値 + 1（無ければ 001）。
-- 支払期日: profile の `due` から計算し、`dueNote` も埋める。
+- 支払期日: 依頼の指定、無ければ profile の `due` から計算する（`dueNote` は上の表に従う）。
 - 金額の計算はしない（`render.mjs` が小計・消費税・合計を計算して出力する）。
 - `<work>/<番号>.json` に保存する。`revision` は 1。
 

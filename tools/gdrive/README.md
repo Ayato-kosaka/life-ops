@@ -35,29 +35,12 @@ node tools/gdrive/gdrive.mjs trash --id <id>
 | `GDRIVE_REFRESH_TOKEN` | リフレッシュトークン（スコープ `https://www.googleapis.com/auth/drive`） |
 | `GDRIVE_ACCESS_TOKEN` | （任意）取得済みのアクセストークン。設定時は上の3つより優先 |
 
-登録先:
+置き場所: GitHub Actions は同名の Repository secrets、Claude Code（クラウド）は環境の環境変数、ローカルはシェルの環境変数。
+リポジトリ内のファイルには書かない。
 
-- **GitHub Actions**: リポジトリの Settings → Secrets and variables → Actions に同名で登録
-- **Claude Code（クラウド）**: 環境の設定（セッションのタイトルバーの環境メニュー → Edit）で環境変数として登録
-- **ローカル**: シェルの環境変数（リポジトリ内のファイルには書かない）
-
-### 初回セットアップ（一度だけ）
-
-1. [Google Cloud Console](https://console.cloud.google.com/) でプロジェクトを作り、**Google Drive API** を有効にする。
-2. 「Google Auth Platform」（OAuth 同意画面）を構成する。対象は「外部」、テストユーザーに自分のアカウントを追加。
-3. **公開ステータスを「本番環境」にする。** 「テスト」のままだとリフレッシュトークンが7日で失効する。
-   審査は不要（自分しか使わないため。許可画面で「未確認のアプリ」と出るので「詳細」から続行する）。
-4. 「クライアント」で OAuth クライアントを作る。種類は **デスクトップ アプリ**。
-5. ローカルでリフレッシュトークンを取得する:
-
-   ```bash
-   export GDRIVE_CLIENT_ID=... GDRIVE_CLIENT_SECRET=...
-   node tools/gdrive/gdrive.mjs auth                      # 表示された URL をブラウザで開いて許可
-   node tools/gdrive/gdrive.mjs auth --code '<移動先の http://localhost/?code=... のURL>'
-   ```
-
-   表示された `refresh_token` を上の登録先に保存する。チャットやリポジトリには貼らない。
-6. GitHub Actions の `gdrive-check` ワークフローを手動実行して疎通を確認する。
+OAuth クライアントは「デスクトップ アプリ」、同意画面の公開ステータスは「本番環境」（「テスト」だとリフレッシュトークンが7日で失効する）。
+リフレッシュトークンは `node tools/gdrive/gdrive.mjs auth` で取得できる。
+ユーザーが行う初回設定の手順はリポジトリに置かず、Issue（[#103](https://github.com/Ayato-kosaka/life-ops/issues/103)）で管理する。
 
 ## GitHub Actions から使う
 

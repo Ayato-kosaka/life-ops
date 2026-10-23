@@ -20,11 +20,25 @@ function lineAmount(line) {
   return Math.round((line.qty ?? 1) * line.unitPrice);
 }
 
+// itemsTaxIncluded=true のとき、明細の単価は税込。表示用に税抜へ換算し、
+// 消費税は「税込合計 − 税抜小計」として、取り決めた税込金額に必ず一致させる。
+export function normalizeItems(inv) {
+  if (!inv.itemsTaxIncluded) return inv;
+  const div = 1 + (inv.taxRate ?? 0.1);
+  const items = inv.items.map((l) => {
+    const incl = lineAmount(l);
+    return { ...l, unitPrice: Math.round((l.unitPrice ?? incl) / div), amount: Math.round(incl / div), amountTaxIncluded: incl };
+  });
+  return { ...inv, items };
+}
+
 export function computeTotals(inv) {
   const taxRate = inv.taxRate ?? 0.1;
   const round = roundFns[inv.taxRounding ?? "round"];
   const subtotal = inv.items.reduce((s, l) => s + lineAmount(l), 0);
-  const tax = round(subtotal * taxRate);
+  const tax = inv.itemsTaxIncluded
+    ? inv.items.reduce((s, l) => s + l.amountTaxIncluded, 0) - subtotal
+    : round(subtotal * taxRate);
   const itemsTotal = subtotal + tax;
   const expensesTotal = (inv.expenses ?? []).reduce((s, l) => s + lineAmount(l), 0);
   return { taxRate, subtotal, tax, itemsTotal, expensesTotal, total: itemsTotal + expensesTotal };
@@ -189,10 +203,11 @@ if (import.meta.url === pathToFileURL(process.argv[1]).href) {
     console.error("usage: render.mjs <invoice.json> [--out <file.pdf>] [--html <file.html>]");
     process.exit(2);
   }
-  const inv = JSON.parse(await readFile(src, "utf8"));
+  const raw = JSON.parse(await readFile(src, "utf8"));
   for (const key of ["number", "issueDate", "dueDate", "subject", "client", "issuer", "bank", "items"]) {
-    if (inv[key] == null) throw new Error(`invoice.${key} がありません`);
+    if (raw[key] == null) throw new Error(`invoice.${key} がありません`);
   }
+  const inv = normalizeItems(raw);
   const totals = computeTotals(inv);
   const html = buildHtml(inv, totals, await readFile(join(here, "style.css"), "utf8"));
   const out = opt("out") ?? src.replace(/\.json$/, "") + ".pdf";

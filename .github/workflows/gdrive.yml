@@ -1,0 +1,76 @@
+# Claude Code のセッション（認証情報を持たない）から Google Drive を操作するためのワークフロー。
+# 機密データは sealbox で暗号化してやり取りする（使い方は CLAUDE.md「セッションから Google Drive を使う」）。
+#   payload:   put する内容を tools/sealbox/public.key で暗号化したもの
+#   reply-key: 結果を暗号化するための公開鍵（呼び出し側が毎回作る）。結果はログの SEALED_RESULT: 行に出る
+name: gdrive
+run-name: gdrive ${{ inputs.command }} ${{ inputs.request-id }}
+
+on:
+  workflow_dispatch:
+    inputs:
+      command:
+        type: choice
+        options: [ls, stat, get, put, mkdir, trash]
+      folder:
+        description: 起点フォルダID（My Drive 直下は root）
+        default: ""
+      path:
+        default: ""
+      id:
+        default: ""
+      name:
+        default: ""
+      payload:
+        description: put する内容（sealbox で暗号化）
+        default: ""
+      reply-key:
+        description: 結果の暗号化に使う公開鍵（base64 DER）
+        required: true
+      request-id:
+        description: 実行を見分けるための任意の文字列（run 名に入る）
+        default: ""
+
+permissions:
+  contents: read
+
+jobs:
+  run:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - env:
+          GDRIVE_CLIENT_ID: ${{ secrets.GDRIVE_CLIENT_ID }}
+          GDRIVE_CLIENT_SECRET: ${{ secrets.GDRIVE_CLIENT_SECRET }}
+          GDRIVE_REFRESH_TOKEN: ${{ secrets.GDRIVE_REFRESH_TOKEN }}
+          IN_COMMAND: ${{ inputs.command }}
+          IN_FOLDER: ${{ inputs.folder }}
+          IN_PATH: ${{ inputs.path }}
+          IN_ID: ${{ inputs.id }}
+          IN_NAME: ${{ inputs.name }}
+          PAYLOAD: ${{ inputs.payload }}
+          REPLY_KEY: ${{ inputs.reply-key }}
+        run: |
+          set -euo pipefail
+          G="node tools/gdrive/gdrive.mjs"
+          SB="node tools/sealbox/sealbox.mjs"
+          key="$RUNNER_TEMP/sealbox.pem"
+          $G get --folder root --path life-ops/_keys/sealbox-private.pem --out "$key" > /dev/null
+
+          args=("$IN_COMMAND")
+          if [[ -n "$PAYLOAD" ]]; then
+            [[ -n "$IN_NAME" || -n "$IN_ID" ]] || { echo "::error::payload を put するときは name か id を指定してください"; exit 1; }
+            $SB open - --key "$key" --out "$RUNNER_TEMP/payload" <<< "$PAYLOAD"
+            args+=("$RUNNER_TEMP/payload")
+          fi
+          for k in folder path id name; do
+            var="IN_${k^^}"
+            if [[ -n "${!var}" ]]; then args+=("--$k" "${!var}"); fi
+          done
+
+          out="$RUNNER_TEMP/result"
+          if [[ "$IN_COMMAND" == get ]]; then
+            $G "${args[@]}" --out "$out" > /dev/null
+          else
+            $G "${args[@]}" > "$out"
+          fi
+          echo "SEALED_RESULT:$($SB seal "$out" --pub "$REPLY_KEY")"

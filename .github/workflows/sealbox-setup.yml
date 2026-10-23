@@ -1,0 +1,29 @@
+# sealbox の鍵ペアを一度だけ作る。秘密鍵は Google Drive（life-ops/_keys/）にだけ保存し、
+# 公開鍵はログに出す（公開してよい）。出力された公開鍵は tools/sealbox/public.key にコミットする。
+name: sealbox-setup
+
+on: workflow_dispatch
+
+permissions:
+  contents: read
+
+jobs:
+  setup:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - env:
+          GDRIVE_CLIENT_ID: ${{ secrets.GDRIVE_CLIENT_ID }}
+          GDRIVE_CLIENT_SECRET: ${{ secrets.GDRIVE_CLIENT_SECRET }}
+          GDRIVE_REFRESH_TOKEN: ${{ secrets.GDRIVE_REFRESH_TOKEN }}
+        run: |
+          set -euo pipefail
+          G="node tools/gdrive/gdrive.mjs"
+          if $G stat --folder root --path life-ops/_keys/sealbox-private.pem > /dev/null 2>&1; then
+            echo "::error::鍵は作成済みです。作り直す場合は Drive の life-ops/_keys/sealbox-private.pem を先に削除してください"
+            exit 1
+          fi
+          node tools/sealbox/sealbox.mjs keygen --private "$RUNNER_TEMP/k.pem" --public "$RUNNER_TEMP/k.pub" > /dev/null
+          $G put "$RUNNER_TEMP/k.pem" --folder root --path life-ops/_keys --name sealbox-private.pem > /dev/null
+          echo "PUBLIC_KEY:$(cat "$RUNNER_TEMP/k.pub")"
+          { echo '公開鍵（tools/sealbox/public.key にコミットする）:'; echo '```'; cat "$RUNNER_TEMP/k.pub"; echo '```'; } >> "$GITHUB_STEP_SUMMARY"

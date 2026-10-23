@@ -1,0 +1,86 @@
+# 請求書PDFを生成して Google Drive に保存し、成功したら github-message で通知する。
+# 呼び出し手順は .claude/skills/invoice/SKILL.md。請求データは sealbox で暗号化して payload に入れる。
+#   payload:   {"invoice": <render.mjs に渡す請求データ>, "pdfName": "請求書_....pdf"} を暗号化したもの
+#   reply-key: 結果を暗号化する公開鍵。結果（pdfId・合計など）はログの SEALED_RESULT: 行に出る
+name: invoice
+run-name: invoice ${{ inputs.number }} r${{ inputs.revision }} ${{ inputs.request-id }}
+
+on:
+  workflow_dispatch:
+    inputs:
+      payload:
+        required: true
+      number:
+        description: 請求書番号（公開してよい情報）
+        required: true
+      revision:
+        default: "1"
+      issue:
+        description: 完了を通知する Issue 番号（空なら通知しない）
+        default: ""
+      reply-key:
+        required: true
+      request-id:
+        default: ""
+
+permissions:
+  contents: read
+
+env:
+  INVOICE_FOLDER: 1UoBTtgJ220Q0341VtOFVpEh7jVIcpOIs
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: install playwright
+        run: |
+          npm install --no-save --no-package-lock playwright@1.56.1 > /dev/null
+          npx playwright install --with-deps chromium > /dev/null
+      - name: render and upload
+        env:
+          GDRIVE_CLIENT_ID: ${{ secrets.GDRIVE_CLIENT_ID }}
+          GDRIVE_CLIENT_SECRET: ${{ secrets.GDRIVE_CLIENT_SECRET }}
+          GDRIVE_REFRESH_TOKEN: ${{ secrets.GDRIVE_REFRESH_TOKEN }}
+          PAYLOAD: ${{ inputs.payload }}
+          NUMBER: ${{ inputs.number }}
+          REPLY_KEY: ${{ inputs.reply-key }}
+        run: |
+          set -euo pipefail
+          G="node tools/gdrive/gdrive.mjs"
+          SB="node tools/sealbox/sealbox.mjs"
+          T="$RUNNER_TEMP"
+          $G get --folder root --path life-ops/_keys/sealbox-private.pem --out "$T/sealbox.pem" > /dev/null
+          $SB open - --key "$T/sealbox.pem" --out "$T/req.json" <<< "$PAYLOAD"
+
+          jq '.invoice' "$T/req.json" > "$T/invoice.json"
+          pdf_name=$(jq -r '.pdfName' "$T/req.json")
+          [[ "$(jq -r '.number' "$T/invoice.json")" == "$NUMBER" ]] || { echo "::error::number が payload と一致しません"; exit 1; }
+
+          node .claude/skills/invoice/render.mjs "$T/invoice.json" --out "$T/invoice.pdf" > "$T/render.json"
+
+          pdf_id=$(jq -r '.drive.pdfId // empty' "$T/invoice.json")
+          if [[ -n "$pdf_id" ]]; then
+            $G put "$T/invoice.pdf" --id "$pdf_id" --name "$pdf_name" > "$T/pdf.json"
+          else
+            $G put "$T/invoice.pdf" --folder "$INVOICE_FOLDER" --name "$pdf_name" > "$T/pdf.json"
+          fi
+          jq --arg id "$(jq -r .id "$T/pdf.json")" '.drive.pdfId = $id' "$T/invoice.json" > "$T/$NUMBER.json"
+          $G put "$T/$NUMBER.json" --folder "$INVOICE_FOLDER" --path _data/invoices > /dev/null
+
+          jq -n --slurpfile pdf "$T/pdf.json" --slurpfile r "$T/render.json" \
+            '{pdfId: $pdf[0].id, pdfName: $pdf[0].name, webViewLink: $pdf[0].webViewLink, action: $pdf[0].action, totals: $r[0].totals}' > "$T/reply.json"
+          echo "SEALED_RESULT:$($SB seal "$T/reply.json" --pub "$REPLY_KEY")"
+
+  notify:
+    needs: build
+    if: inputs.issue != ''
+    permissions:
+      issues: write
+      pull-requests: write
+    uses: ./.github/workflows/github-message.yml
+    with:
+      issue: ${{ inputs.issue }}
+      body: 請求書 `${{ inputs.number }}`（第${{ inputs.revision }}版）を作成し、Google Drive に保存しました。内容を確認し、修正があれば Claude Code のセッションで指摘してください。
+      dedupe-key: invoice:${{ inputs.number }}:r${{ inputs.revision }}

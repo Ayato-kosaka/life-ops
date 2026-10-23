@@ -26,8 +26,11 @@ $ROOT/
     └── invoices/<番号>.json            # 請求書ごとの入力データ（再生成・修正・次回の雛形に使う）
 ```
 
-Drive 操作は `node tools/gdrive/gdrive.mjs`（以下 `gdrive`）で行う。認証は環境変数
-`GDRIVE_CLIENT_ID` / `GDRIVE_CLIENT_SECRET` / `GDRIVE_REFRESH_TOKEN`。詳細は `tools/gdrive/README.md`。
+セッションは Google の認証情報を持たない。Drive の読み書きは GitHub Actions に任せ、データは sealbox で暗号化して渡す
+（流れは `CLAUDE.md` の「セッションから Google Drive を使う」）。以下の「`gdrive.yml` で get」などはその流れで実行することを指す。
+
+- 読み書き全般: `gdrive.yml`（`folder: $ROOT`）
+- PDF生成 → 保存 → 通知: `invoice.yml`（PDF は大きく入力に収まらないため、Actions 側で `render.mjs` を実行して作る）
 
 ### profile.json
 
@@ -71,13 +74,12 @@ Drive 操作は `node tools/gdrive/gdrive.mjs`（以下 `gdrive`）で行う。�
 
 ### 1. 準備
 
-1. `gdrive whoami` で認証を確認する。失敗したら PDF 生成までは進め、PDF をユーザーに渡したうえで
-   「Drive 認証が未設定のためアップロードできない」と伝える（成功通知は送らない）。
-   認証の設定・再設定がユーザー作業として必要なら、その Issue（初回設定は #103）に手順を書いて通知する。
-2. `gdrive get --folder $ROOT --path _data/profile.json --out <work>/profile.json` で再利用情報を読む。
-   無ければ請求元・口座情報をヒアリングして作る。
-3. `gdrive ls --folder $ROOT --path _data/invoices` で既存の請求データを確認する。同じ請求先の直近の請求があれば
+1. 返信用の鍵を作る（`<work>/reply.pem`）。以降の Actions 呼び出しで使い回してよい。
+2. `gdrive.yml` で `get`（`path: _data/profile.json`）し、再利用情報を読む。無ければ請求元・口座情報をヒアリングして作る。
+3. `gdrive.yml` で `ls`（`path: _data/invoices`）し、既存の請求データを確認する。同じ請求先の直近の請求があれば
    `get` して雛形にする（件名・明細の書き方・経費の項目を踏襲できる）。
+4. Actions が失敗する（認証切れなど）場合は、PDF をローカル生成してユーザーに渡し、保存できなかったことを伝える。
+   認証の再設定などユーザー作業が必要なら、その Issue を作って手順を書き、通知する。
 
 ### 2. ヒアリング（足りないものだけ聞く）
 
@@ -114,34 +116,30 @@ profile と直近の請求から埋まるものは聞かない。毎回聞く必
 - 金額の計算はしない（`render.mjs` が小計・消費税・合計を計算して出力する）。
 - `<work>/<番号>.json` に保存する。`revision` は 1。
 
-### 4. PDF を生成して確認する
+### 4. PDF をローカルで生成して確認する
 
 ```bash
 node .claude/skills/invoice/render.mjs <work>/<番号>.json --out <work>/<番号>.pdf
 ```
 
 出力された `totals` とヒアリング内容が一致するか確認する。可能なら `pdftoppm -png -r 70` で画像化して見た目を確認する。
+（保存用の PDF は Actions 側で同じコードから生成される）
 
-### 5. Google Drive に保存する
+### 5. 通知先の Issue を決める
 
-PDF → JSON → profile の順に保存する。PDF のファイル名は `請求書_<番号>_<件名の短縮>.pdf`。
+通知と Issue の扱いは `CLAUDE.md` に従う。関連する既存 Issue（例: 「10月分の請求書を出す」）があればそれを使い、
+無ければ `請求書作成: <番号>` という Issue を作る（本文にも番号以外の請求内容は書かない）。番号を `github.issue` に記録する。
 
-```bash
-gdrive put <work>/<番号>.pdf --folder $ROOT --name "請求書_<番号>_<件名の短縮>.pdf"   # 返り値の id を drive.pdfId に記録
-gdrive put <work>/<番号>.json --folder $ROOT --path _data/invoices
-gdrive put <work>/profile.json --folder $ROOT --path _data                           # 変更があった場合のみ
-```
+### 6. Google Drive に保存して通知する
 
-### 6. 通知する（保存がすべて成功した場合のみ）
-
-通知の仕組みと Issue の扱いは `CLAUDE.md` の「本人への通知」に従う。請求書では:
-
-- 関連する既存 Issue（例: 「10月分の請求書を出す」）があればそれを使う。無ければ
-  `請求書作成: <番号>` という Issue を作る。番号を `github.issue` に記録し、JSON を再度 `put` する。
-- `github-message` で通知する。`dedupe-key` は `invoice:<番号>:r<revision>`（同じ版を二重に通知しない）。
-- 本文の例（番号以外の請求内容は書かない）:
-  > 請求書 `INV-20261023-001`（第1版）を作成し、Google Drive に保存しました。内容を確認し、修正があれば Claude Code のセッションで指摘してください。
-- 自分で作った Issue は通知後にクローズする（請求書の作成が完了条件のため）。既存 Issue はその完了条件を満たす場合のみクローズする。
+1. profile に変更があれば、`gdrive.yml` で `put`（`path: _data`, `name: profile.json`, `payload`: 暗号化した profile.json）。
+2. `{"invoice": <番号>.json の中身, "pdfName": "請求書_<番号>_<件名の短縮>.pdf"}` を暗号化して `payload` にし、
+   `invoice.yml` を起動する（`number`, `revision`, `issue`, `reply-key`, `request-id`）。
+   - Actions が PDF を生成 → Drive に保存（`drive.pdfId` があれば同じファイルを更新）→ `_data/invoices/<番号>.json` を保存し、
+     **すべて成功した場合だけ** `github-message` で通知する（`dedupe-key: invoice:<番号>:r<revision>`）。
+   - 失敗したら通知は送られない。ログ（機密は出ない）で原因を直し、同じ `revision` で再実行してよい（二重通知はされない）。
+3. 返ってきた結果（`pdfId`・`webViewLink`・`totals`）を確認する。`totals` がローカル生成と一致すること。
+4. 自分で作った Issue は、notify ジョブの成功を確認してからクローズする。既存 Issue はその完了条件を満たす場合のみクローズする。
 
 ### 7. ユーザーへの報告
 
@@ -149,10 +147,9 @@ gdrive put <work>/profile.json --folder $ROOT --path _data                      
 
 ## 修正して再アップロードするとき
 
-1. `_data/invoices/<番号>.json` を `get` し、指摘箇所を直して `revision` を +1 する（番号は変えない）。
-2. 再生成し、`gdrive put <pdf> --id <drive.pdfId> --name <新しいファイル名>` で**同じファイルを更新**する
-   （URL が変わらず、Drive の版履歴にも残る）。JSON も `put` し直す。
-3. `github.issue` の Issue に `dedupe-key: invoice:<番号>:r<revision>` で通知する（クローズ済みのままでよい）。
+1. `gdrive.yml` で `_data/invoices/<番号>.json` を `get` し、指摘箇所を直して `revision` を +1 する（番号は変えない）。
+2. ローカルで再生成して確認し、手順 6-2 と同じく `invoice.yml` を起動する。`drive.pdfId` があるので**同じファイルが更新**される
+   （URL が変わらず、Drive の版履歴にも残る）。通知先は `github.issue` の Issue（クローズ済みのままでよい）。
 
 ## 改善するとき
 

@@ -35,8 +35,8 @@ node tools/gdrive/gdrive.mjs trash --id <id>
 | `GDRIVE_REFRESH_TOKEN` | リフレッシュトークン（スコープ `https://www.googleapis.com/auth/drive`） |
 | `GDRIVE_ACCESS_TOKEN` | （任意）取得済みのアクセストークン。設定時は上の3つより優先 |
 
-置き場所: GitHub Actions は同名の Repository secrets、Claude Code（クラウド）は環境の環境変数、ローカルはシェルの環境変数。
-リポジトリ内のファイルには書かない。
+置き場所: GitHub Actions の Repository secrets と、必要ならローカルのシェルの環境変数だけ。リポジトリ内のファイルには書かない。
+Claude Code（クラウド）のセッションには渡さない。セッションからは `gdrive.yml` ワークフロー経由で使う（`CLAUDE.md`「セッションから Google Drive を使う」）。
 
 OAuth クライアントは「デスクトップ アプリ」、同意画面の公開ステータスは「本番環境」（「テスト」だとリフレッシュトークンが7日で失効する）。
 リフレッシュトークンは `node tools/gdrive/gdrive.mjs auth` で取得できる。

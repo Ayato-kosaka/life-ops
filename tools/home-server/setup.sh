@@ -55,6 +55,12 @@ for s in cups cups-browsed bluetooth ModemManager avahi-daemon; do
     sudo systemctl disable --now "$s.service" || true
   fi
 done
+# ソケットや監視が残っていると、呼ばれたときにサービスが起き直す
+for u in avahi-daemon.socket cups.socket cups.path; do
+  if systemctl list-unit-files "$u" --no-legend | grep -q .; then
+    sudo systemctl disable --now "$u" || true
+  fi
+done
 
 step "スリープさせない（蓋を閉じても動き続ける）"
 sudo mkdir -p /etc/systemd/logind.conf.d
@@ -121,7 +127,7 @@ if ! installed google-chrome-stable; then
   curl -fsSL -o "$TMP/chrome.deb" https://dl.google.com/linux/direct/google-chrome-stable_current_amd64.deb
   sudo apt-get install -y "$TMP/chrome.deb"
 fi
-sudo DEBIAN_FRONTEND=noninteractive apt-get install -y xfce4 xfce4-terminal dbus-x11
+sudo DEBIAN_FRONTEND=noninteractive apt-get install -y xfce4 xfce4-terminal dbus-x11 tmux
 if ! installed chrome-remote-desktop; then
   curl -fsSL -o "$TMP/crd.deb" https://dl.google.com/linux/direct/chrome-remote-desktop_current_amd64.deb
   sudo DEBIAN_FRONTEND=noninteractive apt-get install -y "$TMP/crd.deb"
@@ -148,8 +154,46 @@ docker system prune -af --filter "until=168h" >/dev/null 2>&1 || true
 EOF
 sudo chmod +x /etc/cron.weekly/docker-prune
 
+step "常駐（Chrome と Claude Code Remote Control）"
+SRC=$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)
+mkdir -p "$HOME/.local/bin" "$HOME/.config/autostart" "$HOME/.config/systemd/user"
+install -m 0755 "$SRC/chrome-keepalive.sh" "$HOME/.local/bin/chrome-keepalive"
+install -m 0755 "$SRC/claude-rc.sh" "$HOME/.local/bin/claude-rc"
+# Chrome は Chrome Remote Desktop のデスクトップ（XFCE）だけで起こす。画面の前の GNOME では起こさない
+cat > "$HOME/.config/autostart/chrome-keepalive.desktop" <<DESKTOP
+[Desktop Entry]
+Type=Application
+Name=Chrome keepalive
+Exec=$HOME/.local/bin/chrome-keepalive
+OnlyShowIn=XFCE;
+DESKTOP
+cat > "$HOME/.config/systemd/user/claude-rc.service" <<'UNIT'
+[Unit]
+Description=Claude Code Remote Control (tmux session: claude-rc)
+Wants=network-online.target
+After=network-online.target
+
+[Service]
+Type=forking
+ExecStart=/usr/bin/tmux new-session -d -s claude-rc %h/.local/bin/claude-rc
+ExecStop=/usr/bin/tmux kill-session -t claude-rc
+Restart=on-failure
+RestartSec=10
+
+[Install]
+WantedBy=default.target
+UNIT
+# ログインしていなくても、起動時にユーザーサービスを動かす
+sudo loginctl enable-linger "$USER_NAME"
+if [[ -x "$HOME/.local/bin/claude" ]]; then
+  systemctl --user daemon-reload
+  systemctl --user enable claude-rc.service
+else
+  echo "Claude Code が未インストールのため、Remote Control の有効化はスキップ"
+fi
+
 step "完了"
-echo "グループ追加（docker, chrome-remote-desktop）を反映するため、一度ログアウトするか再起動してください。"
+echo "グループ（docker）の追加と常駐の設定を反映するため、再起動してください。"
 if ! tailscale status >/dev/null 2>&1; then
   echo "Tailscale は未ログインです: sudo tailscale up --ssh"
 fi

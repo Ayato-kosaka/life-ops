@@ -1,6 +1,7 @@
 #!/usr/bin/env bash
 # 常設PC（Ubuntu 24.04 LTS デスクトップ）の初期設定。何度実行しても同じ状態になる（冪等）。
-# 使い方: bash setup.sh   （一般ユーザーで実行し、途中で sudo を使う）
+# 使い方: bash tools/home-server/setup.sh   （一般ユーザーで実行し、途中で sudo を使う）
+# 構成の定義は knowledge/assets/home-server.md
 set -euo pipefail
 
 if [[ $EUID -eq 0 ]]; then

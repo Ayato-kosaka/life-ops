@@ -25,6 +25,10 @@ installed() { dpkg-query -W -f='${Status}' "$1" 2>/dev/null | grep -q 'ok instal
 
 step "基本設定（タイムゾーン・パッケージ更新）"
 sudo timedatectl set-timezone Asia/Tokyo
+# リリースアップグレード（do-release-upgrade）が無効化して残した、古いリリース向けの入手元を片づける。
+# 必要なもの（Tailscale・Docker）は下で今のリリース向けに入れ直す
+sudo rm -f /etc/apt/sources.list.d/*.distUpgrade /etc/apt/sources.list.d/*.save \
+  /etc/apt/sources.list.d/third-party.sources /etc/apt/sources.list.d/obsproject-*
 sudo apt-get update
 sudo DEBIAN_FRONTEND=noninteractive apt-get -y full-upgrade
 sudo apt-get install -y curl ca-certificates gnupg
@@ -106,7 +110,8 @@ else
 fi
 
 step "Tailscale"
-if ! command -v tailscale >/dev/null; then
+# 入手元が無ければ（新規、またはリリースアップグレードで外れた）公式スクリプトで入れ直す
+if [[ ! -e /etc/apt/sources.list.d/tailscale.list ]]; then
   curl -fsSL https://tailscale.com/install.sh | sh
 fi
 sudo systemctl enable --now tailscaled
@@ -125,14 +130,13 @@ echo 'exec /etc/X11/Xsession /usr/bin/startxfce4' > "$HOME/.chrome-remote-deskto
 sudo usermod -aG chrome-remote-desktop "$USER_NAME"
 
 step "Docker（必要なときに使えるよう入れておく）"
-if ! installed docker-ce; then
-  sudo install -m 0755 -d /etc/apt/keyrings
-  sudo curl -fsSL https://download.docker.com/linux/ubuntu/gpg -o /etc/apt/keyrings/docker.asc
-  echo "deb [arch=$(dpkg --print-architecture) signed-by=/etc/apt/keyrings/docker.asc] https://download.docker.com/linux/ubuntu $VERSION_CODENAME stable" \
-    | sudo tee /etc/apt/sources.list.d/docker.list >/dev/null
-  sudo apt-get update
-  sudo apt-get install -y docker-ce docker-ce-cli containerd.io docker-buildx-plugin docker-compose-plugin
-fi
+# 入手元は毎回今のリリース向けに書き直す（リリースアップグレードで外れても戻る）
+sudo install -m 0755 -d /etc/apt/keyrings
+sudo curl -fsSL https://download.docker.com/linux/ubuntu/gpg -o /etc/apt/keyrings/docker.asc
+echo "deb [arch=$(dpkg --print-architecture) signed-by=/etc/apt/keyrings/docker.asc] https://download.docker.com/linux/ubuntu $VERSION_CODENAME stable" \
+  | sudo tee /etc/apt/sources.list.d/docker.list >/dev/null
+sudo apt-get update
+sudo apt-get install -y docker-ce docker-ce-cli containerd.io docker-buildx-plugin docker-compose-plugin
 sudo usermod -aG docker "$USER_NAME"
 # 未使用イメージ等を溜めないよう、週1で掃除する
 sudo tee /etc/cron.weekly/docker-prune >/dev/null <<'EOF'

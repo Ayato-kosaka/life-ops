@@ -149,8 +149,9 @@ step "画面の前の GNOME と仮想デスクトップは、コマンドで切�
 # GDM はパスワードを受けた直後に「同じユーザーのセッションが動いている」と断るので、ログインの前後のフックでは避けられない。
 # ふだんは画面の前に GNOME を出さず、使うときだけ desktop-switch local / remote で切り替える
 SRC=$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)
-mkdir -p "$HOME/.local/bin"
-install -m 0755 "$SRC/desktop-switch.sh" "$HOME/.local/bin/desktop-switch"
+# 画面の前の文字の画面からも確実に呼べるよう、PATH の設定に左右されない /usr/local/bin に置く
+sudo install -m 0755 "$SRC/desktop-switch.sh" /usr/local/bin/desktop-switch
+rm -f "$HOME/.local/bin/desktop-switch"
 sudo systemctl set-default multi-user.target
 # 以前の版が置いた GDM のフックと、ログイン画面から隠す設定を元に戻す
 sudo rm -f /etc/gdm3/PostLogin/Default

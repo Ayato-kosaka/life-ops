@@ -101,6 +101,8 @@ if [[ -n "$limit_file" ]]; then
   sudo tee /etc/systemd/system/battery-charge-limit.service >/dev/null <<EOF
 [Unit]
 Description=Limit battery charge to 80%
+# 電池を外したら何もしない（失敗扱いにしない）
+ConditionPathExists=$limit_file
 
 [Service]
 Type=oneshot

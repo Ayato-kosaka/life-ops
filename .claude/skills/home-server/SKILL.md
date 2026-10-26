@@ -36,6 +36,10 @@ systemd-analyze cat-config systemd/logind.conf | grep -E '^HandleLid'
 systemctl is-enabled sleep.target suspend.target          # masked であること
 tailscale status | head -5
 systemctl status 'chrome-remote-desktop@*' --no-pager | head -5
+tailscale status --json | python3 -c 'import sys,json;print(json.load(sys.stdin)["Self"].get("KeyExpiry"))'  # None であること（期限切れで繋がらなくなる）
+systemctl --user list-units 'claude-rc@*' --no-pager; tmux ls     # rc-repos の全フォルダが active
+pgrep -u "$(id -u)" -x chrome >/dev/null && echo chrome-up         # 仮想デスクトップの Chrome
+nmcli -t -f NAME,DEVICE connection show --active                  # ネットワーク
 journalctl --disk-usage; docker system df; snap list --all | grep disabled
 du -xh --max-depth=1 ~ 2>/dev/null | sort -rh | head -15
 ps -eo pid,rss,pcpu,comm --sort=-rss | head -15
@@ -43,3 +47,4 @@ ps -eo pid,rss,pcpu,comm --sort=-rss | head -15
 
 - 使用率が80%を超えていたら、大きいものから順に、消してよいかユーザーに確認してから削除する（ゴミ箱・キャッシュ・Docker・古いsnap）
 - Docker のボリュームにはコードやデータが入っていることがあるので、削除前に必ず確認する
+- Remote Control が「Trust …?」などの確認で止まっていたら、`tmux attach -t claude-rc-<フォルダ名>` で利用者に答えてもらう

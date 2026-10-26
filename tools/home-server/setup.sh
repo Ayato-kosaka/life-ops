@@ -144,10 +144,25 @@ else
   echo "Chrome Remote Desktop が未登録のため、自動起動の設定はスキップ"
 fi
 
-step "デスクトップは Chrome Remote Desktop の仮想デスクトップ1つにする（画面の前の GNOME ログインは止める）"
+step "画面の前の GNOME は別ユーザー（${LOCAL_USER:=local}）で使う"
 # 同じユーザーが GNOME と仮想デスクトップに同時に入ると、Chrome やセッションがぶつかる。
-# 手元で GNOME が要るときだけ `sudo systemctl start gdm` で一時的に起こす
-sudo systemctl set-default multi-user.target
+# 画面の前ではこのユーザーで GNOME に入り、Chrome Remote Desktop でこのPC自身（仮想デスクトップ）に繋ぐ
+if ! id "$LOCAL_USER" >/dev/null 2>&1; then
+  echo "画面の前で使うユーザー $LOCAL_USER を作ります。パスワードを決めてください"
+  sudo adduser --gecos "" "$LOCAL_USER"
+fi
+# 主ユーザーはログイン画面の一覧に出さない（間違えて GNOME に入るとぶつかる）
+acct=/var/lib/AccountsService/users/$USER_NAME
+if sudo test -f "$acct"; then
+  if sudo grep -q '^SystemAccount=' "$acct"; then
+    sudo sed -i 's/^SystemAccount=.*/SystemAccount=true/' "$acct"
+  else
+    echo 'SystemAccount=true' | sudo tee -a "$acct" >/dev/null
+  fi
+else
+  printf '[User]\nSystemAccount=true\n' | sudo tee "$acct" >/dev/null
+fi
+sudo systemctl set-default graphical.target
 
 step "Docker（必要なときに使えるよう入れておく）"
 # 入手元は毎回今のリリース向けに書き直す（リリースアップグレードで外れても戻る）

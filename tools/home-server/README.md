@@ -21,8 +21,8 @@ bash tools/home-server/setup.sh
 
 - Remote Control の様子を見る・初回の確認に答える: `tmux attach -t claude-rc`（抜けるのは Ctrl-b d）
 - 状態: `systemctl --user status claude-rc`、`pgrep -a chrome`
-- 画面の前の GNOME ログイン（GDM）は止めてある（`systemctl set-default multi-user.target`）。手元で GNOME が要るときだけ `sudo systemctl start gdm`。
-  そのときは Chrome を開かない（Chrome は1つのプロセスなので、仮想デスクトップ側とぶつかる）
+- 画面の前の GNOME には別ユーザー（環境変数 `LOCAL_USER`、既定 `local`。無ければ setup.sh が作る）で入る。主ユーザーは
+  AccountsService の `SystemAccount=true` でログイン画面の一覧から隠す（同じユーザーで GNOME と仮想デスクトップに入るとぶつかるため）
 - 鍵束（gnome-keyring）は XFCE 用の自動起動を `~/.config/autostart/gnome-keyring-secrets-xfce.desktop` に置く
 - Remote Control は `CLAUDE_RC_DIR`（既定 `~/life-ops`）で起動する。ホームフォルダは信頼が保存されないので使わない
 

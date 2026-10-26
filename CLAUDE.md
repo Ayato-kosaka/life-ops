@@ -66,3 +66,4 @@ Claude Code（クラウド）のセッションには Google の認証情報を�
 ## スキル
 
 - `.claude/skills/invoice/` — 請求書PDFの作成 → Google Drive 保存 → 通知
+- `.claude/skills/home-server/` — 常設PC（Ubuntu 24.04）の初期設定・点検・軽量化

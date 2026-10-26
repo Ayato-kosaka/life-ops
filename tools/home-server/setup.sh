@@ -144,29 +144,21 @@ else
   echo "Chrome Remote Desktop が未登録のため、自動起動の設定はスキップ"
 fi
 
-step "画面の前の GNOME と仮想デスクトップを、同時には使わないようにする"
+step "画面の前の GNOME と仮想デスクトップは、コマンドで切り替える（同時には使えない）"
 # 同じユーザーが GNOME と仮想デスクトップに同時に入ると、Chrome やセッションがぶつかる。
-# GDM のフックで、画面の前で GNOME に入ったら仮想デスクトップを止め、ログアウトしたら戻す
-sudo tee /etc/gdm3/PostLogin/Default >/dev/null <<HOOK
-#!/bin/sh
-# 画面の前で主ユーザーがログインしたら、仮想デスクトップ（Chrome Remote Desktop）を止める
-[ "\$USER" = "$USER_NAME" ] && systemctl stop chrome-remote-desktop@$USER_NAME.service
-exit 0
-HOOK
-sudo tee /etc/gdm3/PostSession/Default >/dev/null <<HOOK
-#!/bin/sh
-# 画面の前の GNOME を抜けたら、仮想デスクトップを戻す（登録済みのときだけ）
-[ "\$USER" = "$USER_NAME" ] && systemctl is-enabled -q chrome-remote-desktop@$USER_NAME.service \\
-  && systemctl start chrome-remote-desktop@$USER_NAME.service
-exit 0
-HOOK
-sudo chmod 0755 /etc/gdm3/PostLogin/Default /etc/gdm3/PostSession/Default
-# 以前の版でログイン画面から隠していたら戻す
+# GDM はパスワードを受けた直後に「同じユーザーのセッションが動いている」と断るので、ログインの前後のフックでは避けられない。
+# ふだんは画面の前に GNOME を出さず、使うときだけ desktop-switch local / remote で切り替える
+SRC=$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)
+mkdir -p "$HOME/.local/bin"
+install -m 0755 "$SRC/desktop-switch.sh" "$HOME/.local/bin/desktop-switch"
+sudo systemctl set-default multi-user.target
+# 以前の版が置いた GDM のフックと、ログイン画面から隠す設定を元に戻す
+sudo rm -f /etc/gdm3/PostLogin/Default
+printf '#!/bin/sh\n\nexit 0\n' | sudo tee /etc/gdm3/PostSession/Default >/dev/null
 acct=/var/lib/AccountsService/users/$USER_NAME
 if sudo test -f "$acct"; then
   sudo sed -i 's/^SystemAccount=true/SystemAccount=false/' "$acct"
 fi
-sudo systemctl set-default graphical.target
 # どこから起動しても Chrome が鍵束を使わないようにする（使うと、仮想デスクトップ側で cookie が読めなくなる）
 mkdir -p "$HOME/.local/share/applications"
 sed 's|^Exec=/usr/bin/google-chrome-stable|Exec=/usr/bin/google-chrome-stable --password-store=basic|' \

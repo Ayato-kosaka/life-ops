@@ -23,7 +23,7 @@
 | OS | Ubuntu 24.04 LTS デスクトップ（標準サポートは2029年4月まで） |
 | ディスク | SSD 全体を Ubuntu だけで使う。`/`（312GB）と `/home`（164GB）。スワップは `/swapfile`（2GB）。**暗号化しない**（暗号化すると無人で再起動できなくなるため） |
 | 遠隔操作（CLI） | Tailscale（Tailscale SSH）。鍵の有効期限は無効にする |
-| デスクトップ | 遠隔では Chrome Remote Desktop の仮想デスクトップ（XFCE）を使う（Linux 版は画面の前の画面を映せない）。画面の前の GNOME にも同じユーザーで入れるが、**同時には使わない**。GNOME にログインすると仮想デスクトップは自動で止まり、ログアウトすると戻る（GDM のフック）。GNOME に入っている間、Chrome Remote Desktop では繋がらない（Tailscale と Remote Control は使える） |
+| デスクトップ | ふだんは Chrome Remote Desktop の仮想デスクトップ（XFCE）だけを使い、画面の前は文字のログイン画面にする。Linux 版は画面の前の画面を映せず、同じユーザーで GNOME と仮想デスクトップに同時に入れない（GDM がパスワード直後に断る）ため。画面の前で GUI が要るときだけ `desktop-switch local`、終わったら `desktop-switch remote` で切り替える。切り替えている間は Chrome Remote Desktop では繋がらない（Tailscale と Remote Control は使える） |
 | 鍵束 | 使わない。誰もパスワードでログインしないので、鍵束に頼ると再起動のたびに解除を求められて止まる。Chrome は `--password-store=basic`、gh は `--insecure-storage`（ファイルに保存）。ディスクを暗号化しない方針と同じ水準の守り |
 | 遠隔操作（Claude） | Claude Code Remote Control（`--chrome --permission-mode auto`）を常駐させ、claude.ai/code から操作する |
 | Chrome | Chrome Remote Desktop のデスクトップで常に起動しておく。Claude が操作する Chrome と、人が見る画面は同じ |

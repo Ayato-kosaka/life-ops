@@ -202,27 +202,41 @@ Name=GNOME Keyring (secrets)
 Exec=/usr/bin/gnome-keyring-daemon --start --components=secrets
 OnlyShowIn=XFCE;
 DESKTOP
-cat > "$HOME/.config/systemd/user/claude-rc.service" <<'UNIT'
+# Remote Control はリポジトリごとに1つ動かす（claude.ai/code では、起動したフォルダごとに別の環境として出る）。
+# claude-rc@<ホーム直下のフォルダ名>、tmux のセッション名は claude-rc-<フォルダ名>
+cat > "$HOME/.config/systemd/user/claude-rc@.service" <<'UNIT'
 [Unit]
-Description=Claude Code Remote Control (tmux session: claude-rc)
+Description=Claude Code Remote Control for ~/%i (tmux session: claude-rc-%i)
 Wants=network-online.target
 After=network-online.target
 
 [Service]
-Type=forking
-ExecStart=/usr/bin/tmux new-session -d -s claude-rc %h/.local/bin/claude-rc
-ExecStop=/usr/bin/tmux kill-session -t claude-rc
-Restart=on-failure
-RestartSec=10
+# tmux のサーバーは全部の claude-rc@ で1つを共有するので、プロセスは見張らない（終了時の起動し直しは claude-rc の中で行う）
+Type=oneshot
+RemainAfterExit=yes
+ExecStart=/usr/bin/tmux new-session -d -s claude-rc-%i %h/.local/bin/claude-rc %h/%i
+ExecStop=/usr/bin/tmux kill-session -t claude-rc-%i
 
 [Install]
 WantedBy=default.target
 UNIT
+# 以前の版の、フォルダを1つだけ扱うサービスを片づける
+if [[ -f "$HOME/.config/systemd/user/claude-rc.service" ]]; then
+  systemctl --user disable --now claude-rc.service || true
+  rm -f "$HOME/.config/systemd/user/claude-rc.service"
+fi
 # ログインしていなくても、起動時にユーザーサービスを動かす
 sudo loginctl enable-linger "$USER_NAME"
 if [[ -x "$HOME/.local/bin/claude" ]]; then
   systemctl --user daemon-reload
-  systemctl --user enable claude-rc.service
+  # 対象は CLAUDE_RC_REPOS（ホーム直下のフォルダ名を空白区切り）。無いフォルダは飛ばす
+  for repo in ${CLAUDE_RC_REPOS:-life-ops live-streaming}; do
+    if [[ -d "$HOME/$repo" ]]; then
+      systemctl --user enable --now "claude-rc@$repo.service"
+    else
+      echo "~/$repo が無いため、Remote Control はスキップ"
+    fi
+  done
 else
   echo "Claude Code が未インストールのため、Remote Control の有効化はスキップ"
 fi

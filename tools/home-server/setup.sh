@@ -144,25 +144,33 @@ else
   echo "Chrome Remote Desktop が未登録のため、自動起動の設定はスキップ"
 fi
 
-step "画面の前の GNOME は別ユーザー（${LOCAL_USER:=local}）で使う"
+step "画面の前の GNOME と仮想デスクトップを、同時には使わないようにする"
 # 同じユーザーが GNOME と仮想デスクトップに同時に入ると、Chrome やセッションがぶつかる。
-# 画面の前ではこのユーザーで GNOME に入り、Chrome Remote Desktop でこのPC自身（仮想デスクトップ）に繋ぐ
-if ! id "$LOCAL_USER" >/dev/null 2>&1; then
-  echo "画面の前で使うユーザー $LOCAL_USER を作ります。パスワードを決めてください"
-  sudo adduser --gecos "" "$LOCAL_USER"
-fi
-# 主ユーザーはログイン画面の一覧に出さない（間違えて GNOME に入るとぶつかる）
+# GDM のフックで、画面の前で GNOME に入ったら仮想デスクトップを止め、ログアウトしたら戻す
+sudo tee /etc/gdm3/PostLogin/Default >/dev/null <<HOOK
+#!/bin/sh
+# 画面の前で主ユーザーがログインしたら、仮想デスクトップ（Chrome Remote Desktop）を止める
+[ "\$USER" = "$USER_NAME" ] && systemctl stop chrome-remote-desktop@$USER_NAME.service
+exit 0
+HOOK
+sudo tee /etc/gdm3/PostSession/Default >/dev/null <<HOOK
+#!/bin/sh
+# 画面の前の GNOME を抜けたら、仮想デスクトップを戻す（登録済みのときだけ）
+[ "\$USER" = "$USER_NAME" ] && systemctl is-enabled -q chrome-remote-desktop@$USER_NAME.service \\
+  && systemctl start chrome-remote-desktop@$USER_NAME.service
+exit 0
+HOOK
+sudo chmod 0755 /etc/gdm3/PostLogin/Default /etc/gdm3/PostSession/Default
+# 以前の版でログイン画面から隠していたら戻す
 acct=/var/lib/AccountsService/users/$USER_NAME
 if sudo test -f "$acct"; then
-  if sudo grep -q '^SystemAccount=' "$acct"; then
-    sudo sed -i 's/^SystemAccount=.*/SystemAccount=true/' "$acct"
-  else
-    echo 'SystemAccount=true' | sudo tee -a "$acct" >/dev/null
-  fi
-else
-  printf '[User]\nSystemAccount=true\n' | sudo tee "$acct" >/dev/null
+  sudo sed -i 's/^SystemAccount=true/SystemAccount=false/' "$acct"
 fi
 sudo systemctl set-default graphical.target
+# どこから起動しても Chrome が鍵束を使わないようにする（使うと、仮想デスクトップ側で cookie が読めなくなる）
+mkdir -p "$HOME/.local/share/applications"
+sed 's|^Exec=/usr/bin/google-chrome-stable|Exec=/usr/bin/google-chrome-stable --password-store=basic|' \
+  /usr/share/applications/google-chrome.desktop > "$HOME/.local/share/applications/google-chrome.desktop"
 
 step "Docker（必要なときに使えるよう入れておく）"
 # 入手元は毎回今のリリース向けに書き直す（リリースアップグレードで外れても戻る）

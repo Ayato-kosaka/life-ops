@@ -127,7 +127,10 @@ if ! installed chrome-remote-desktop; then
   sudo DEBIAN_FRONTEND=noninteractive apt-get install -y "$TMP/crd.deb"
 fi
 echo 'exec /etc/X11/Xsession /usr/bin/startxfce4' > "$HOME/.chrome-remote-desktop-session"
-sudo usermod -aG chrome-remote-desktop "$USER_NAME"
+# 古い版だけがこのグループを使う（新しい版にはグループが無い）
+if getent group chrome-remote-desktop >/dev/null; then
+  sudo usermod -aG chrome-remote-desktop "$USER_NAME"
+fi
 
 step "Docker（必要なときに使えるよう入れておく）"
 # 入手元は毎回今のリリース向けに書き直す（リリースアップグレードで外れても戻る）

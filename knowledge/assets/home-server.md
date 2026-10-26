@@ -24,6 +24,8 @@
 | ディスク | SSD 全体を Ubuntu だけで使う。`/`（312GB）と `/home`（164GB）。スワップは `/swapfile`（2GB）。**暗号化しない**（暗号化すると無人で再起動できなくなるため） |
 | 遠隔操作（CLI） | Tailscale（Tailscale SSH）。鍵の有効期限は無効にする |
 | 遠隔操作（GUI） | Chrome Remote Desktop。リモート用のデスクトップは XFCE |
+| 遠隔操作（Claude） | Claude Code Remote Control（`--chrome --permission-mode auto`）を常駐させ、claude.ai/code から操作する |
+| Chrome | Chrome Remote Desktop のデスクトップで常に起動しておく。Claude が操作する Chrome と、人が見る画面は同じ |
 | 電源 | 蓋を閉じても、操作がなくてもスリープしない |
 | 更新 | セキュリティ更新は自動で適用し、再起動が必要なら 04:00 に再起動する |
 | 容量の上限 | journal は 500MB、snap は2リビジョンまで、Docker は週1回、未使用分を削除 |

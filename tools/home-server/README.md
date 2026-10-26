@@ -21,6 +21,9 @@ bash tools/home-server/setup.sh
 
 - Remote Control の様子を見る・初回の確認に答える: `tmux attach -t claude-rc`（抜けるのは Ctrl-b d）
 - 状態: `systemctl --user status claude-rc`、`pgrep -a chrome`
-- Chrome は1つのプロセスなので、画面の前の GNOME で Chrome を開くと、窓は Chrome Remote Desktop のデスクトップ側に出る
+- 画面の前の GNOME ログイン（GDM）は止めてある（`systemctl set-default multi-user.target`）。手元で GNOME が要るときだけ `sudo systemctl start gdm`。
+  そのときは Chrome を開かない（Chrome は1つのプロセスなので、仮想デスクトップ側とぶつかる）
+- 鍵束（gnome-keyring）は XFCE 用の自動起動を `~/.config/autostart/gnome-keyring-secrets-xfce.desktop` に置く
+- Remote Control は `CLAUDE_RC_DIR`（既定 `~/life-ops`）で起動する。ホームフォルダは信頼が保存されないので使わない
 
 Tailscale へのログイン、Chrome Remote Desktop の登録、Claude in Chrome 拡張の導入は、ブラウザで本人が行う（担当 Issue に手順を書く）。

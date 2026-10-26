@@ -23,7 +23,8 @@
 | OS | Ubuntu 24.04 LTS デスクトップ（標準サポートは2029年4月まで） |
 | ディスク | SSD 全体を Ubuntu だけで使う。`/`（312GB）と `/home`（164GB）。スワップは `/swapfile`（2GB）。**暗号化しない**（暗号化すると無人で再起動できなくなるため） |
 | 遠隔操作（CLI） | Tailscale（Tailscale SSH）。鍵の有効期限は無効にする |
-| 遠隔操作（GUI） | Chrome Remote Desktop。リモート用のデスクトップは XFCE |
+| デスクトップ | Chrome Remote Desktop の仮想デスクトップ（XFCE）1つだけ。画面の前の GNOME ログイン（GDM）は止める（同じユーザーで2つ同時に入ると Chrome とセッションがぶつかるため。Linux 版の Chrome Remote Desktop は画面の前の画面を映せない） |
+| 鍵束 | ログインの鍵束（Chrome の cookie を暗号化する）のパスワードは空にする。誰もパスワードでログインしないので、空でないと再起動のたびに Chrome がログアウト状態になる |
 | 遠隔操作（Claude） | Claude Code Remote Control（`--chrome --permission-mode auto`）を常駐させ、claude.ai/code から操作する |
 | Chrome | Chrome Remote Desktop のデスクトップで常に起動しておく。Claude が操作する Chrome と、人が見る画面は同じ |
 | 電源 | 蓋を閉じても、操作がなくてもスリープしない |

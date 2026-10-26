@@ -7,6 +7,8 @@
 
 ## 機材
 
+性能の目安（2026-10-27 に測定）: EC2 の t3.xlarge（4vCPU / 16GB）程度。1スレッドの速さは今の EC2 と同程度だが、15W の省電力 CPU のため8スレッド全体でも1スレッドの約2.8倍まで。CPU クレジットの制限は無い。SSD の読み込みは約520MB/s。
+
 | 項目 | 値 |
 |---|---|
 | 機種 | LG gram 15（**15Z990-HA7TJ**、2019年モデル） |
@@ -14,7 +16,7 @@
 | メモリ | 16GB |
 | ストレージ | SATA SSD 512GB（OS上では 477GB） |
 | ファームウェア | UEFI。起動メニューは F10、BIOS 設定は F2 |
-| 電池 | 常時給電で使う。`lg-laptop` ドライバ経由で充電上限を80%にする |
+| 電池 | **寿命**（2026-10-27: 残量0%で充電されない。容量は新品の58%、充電回数736回）。日本へ送るときに外し、AC 給電だけで使う。停電時の予備電源にはならない |
 
 ## 目標の構成
 
@@ -25,7 +27,7 @@
 | 遠隔操作（CLI） | Tailscale（Tailscale SSH）。鍵の有効期限は無効にする |
 | デスクトップ | ふだんは Chrome Remote Desktop の仮想デスクトップ（XFCE）だけを使い、画面の前は文字のログイン画面にする。Linux 版は画面の前の画面を映せず、同じユーザーで GNOME と仮想デスクトップに同時に入れない（GDM がパスワード直後に断る）ため。画面の前で GUI が要るときだけ `desktop-switch local`、終わったら `desktop-switch remote` で切り替える。切り替えている間は Chrome Remote Desktop では繋がらない（Tailscale と Remote Control は使える） |
 | 鍵束 | 使わない。誰もパスワードでログインしないので、鍵束に頼ると再起動のたびに解除を求められて止まる。Chrome は `--password-store=basic`、gh は `--insecure-storage`（ファイルに保存）。ディスクを暗号化しない方針と同じ水準の守り |
-| 遠隔操作（Claude） | Claude Code Remote Control（`--chrome --permission-mode auto`）を常駐させ、claude.ai/code から操作する |
+| 遠隔操作（Claude） | Claude Code Remote Control（`--chrome --permission-mode auto`）をリポジトリごとに常駐させ（既定は life-ops と live-streaming）、claude.ai/code から操作する |
 | Chrome | Chrome Remote Desktop のデスクトップで常に起動しておく。Claude が操作する Chrome と、人が見る画面は同じ |
 | 電源 | 蓋を閉じても、操作がなくてもスリープしない |
 | 更新 | セキュリティ更新は自動で適用し、再起動が必要なら 04:00 に再起動する |

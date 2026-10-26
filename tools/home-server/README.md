@@ -17,7 +17,8 @@ bash tools/home-server/setup.sh
 | 名前 | 中身 | 起動のしかた |
 |---|---|---|
 | `chrome-keepalive.sh` → `~/.local/bin/chrome-keepalive` | Chrome が動いていなければ30秒以内に起動する | Chrome Remote Desktop のデスクトップ（XFCE）の自動起動（`~/.config/autostart/chrome-keepalive.desktop`、`OnlyShowIn=XFCE`） |
-| `claude-rc.sh` → `~/.local/bin/claude-rc` | 指定したフォルダで `claude remote-control --chrome --permission-mode auto --name home-server-<フォルダ名>` を、終了したら10秒後に起動し直す | systemd のユーザーサービス `claude-rc@<フォルダ名>.service`（リポジトリごとに1つ。対象は `CLAUDE_RC_REPOS`、既定 `life-ops live-streaming`）が tmux の `claude-rc-<フォルダ名>` セッションで動かす。linger を有効にしているので、ログインしていなくても起動時に動く |
+| `claude-rc.sh` → `~/.local/bin/claude-rc` | 指定したフォルダで `claude remote-control --chrome --permission-mode auto --name home-server-<フォルダ名>` を、終了したら10秒後に起動し直す | systemd のユーザーサービス `claude-rc@<フォルダ名>.service` が tmux の `claude-rc-<フォルダ名>` セッションで動かす。対象は `~/.config/home-server/rc-repos`（このPCにだけ置く一覧。1行に1つ、ホーム直下のフォルダ名）。linger を有効にしているので、ログインしていなくても起動時に動く |
+| `github-CLAUDE.md` → `~/github/CLAUDE.md` | 「なんでも用」の `~/github`。ここで起動したセッションは、権限のあるどのリポジトリでも `gh repo clone` して作業する | `rc-repos` に `github` を入れておく（初期値に含む） |
 
 - Remote Control の様子を見る・初回の確認に答える: `tmux attach -t claude-rc-<フォルダ名>`（抜けるのは Ctrl-b d）。
   新しいフォルダは初回に「信頼するか」「Remote Control を有効にするか」「spawn mode」を聞かれる
@@ -28,6 +29,8 @@ bash tools/home-server/setup.sh
   GNOME の中から実行しても最後まで進むよう `systemd-run` で流す）
 - Chrome はどこから起動しても `--password-store=basic`（`~/.local/share/applications/google-chrome.desktop` で上書き）
 - 鍵束（gnome-keyring）は XFCE 用の自動起動を `~/.config/autostart/gnome-keyring-secrets-xfce.desktop` に置く
-- claude.ai/code では、Remote Control を起動したフォルダごとに別の環境として出る。ホームフォルダは信頼が保存されないので使わない
+- claude.ai/code では、Remote Control を起動したフォルダごとに別の環境として出る。1つ約150MB のメモリを使うので、
+  権限のある全リポジトリ（約180）は常駐させず、よく使うものだけ `rc-repos` に入れ、ほかは `~/github` から使う。
+  ホームフォルダは信頼が保存されないので使わない
 
 Tailscale へのログイン、Chrome Remote Desktop の登録、Claude in Chrome 拡張の導入は、ブラウザで本人が行う（担当 Issue に手順を書く）。

@@ -229,10 +229,20 @@ if [[ -f "$HOME/.config/systemd/user/claude-rc.service" ]]; then
 fi
 # ログインしていなくても、起動時にユーザーサービスを動かす
 sudo loginctl enable-linger "$USER_NAME"
+# 「なんでも用」の ~/github。ここで起動したセッションは、権限のあるどのリポジトリでも取ってきて作業する
+mkdir -p "$HOME/github"
+install -m 0644 "$SRC/github-CLAUDE.md" "$HOME/github/CLAUDE.md"
+# 専用で常駐させるリポジトリの一覧は、このPCにだけ置く（他の組織のリポジトリ名を公開リポジトリに書かない）。
+# 1行に1つ、ホーム直下のフォルダ名。# から後ろは無視する
+RC_LIST="$HOME/.config/home-server/rc-repos"
+if [[ ! -f "$RC_LIST" ]]; then
+  mkdir -p "$(dirname "$RC_LIST")"
+  printf '# claude.ai/code の Remote Control で専用に常駐させるフォルダ（ホーム直下の名前を1行に1つ）\ngithub\nlife-ops\n' > "$RC_LIST"
+fi
 if [[ -x "$HOME/.local/bin/claude" ]]; then
   systemctl --user daemon-reload
-  # 対象は CLAUDE_RC_REPOS（ホーム直下のフォルダ名を空白区切り）。無いフォルダは飛ばす
-  for repo in ${CLAUDE_RC_REPOS:-life-ops live-streaming}; do
+  # 無いフォルダは飛ばす
+  for repo in $(sed 's/#.*//' "$RC_LIST"); do
     if [[ -d "$HOME/$repo" ]]; then
       systemctl --user enable --now "claude-rc@$repo.service"
     else

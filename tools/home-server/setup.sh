@@ -137,6 +137,17 @@ echo 'exec /etc/X11/Xsession /usr/bin/startxfce4' > "$HOME/.chrome-remote-deskto
 if getent group chrome-remote-desktop >/dev/null; then
   sudo usermod -aG chrome-remote-desktop "$USER_NAME"
 fi
+# 登録済みなら、起動時に仮想デスクトップを立ち上げる（登録前は設定ファイルが無いので何もしない）
+if compgen -G "$HOME/.config/chrome-remote-desktop/host#*.json" >/dev/null; then
+  sudo systemctl enable "chrome-remote-desktop@$USER_NAME.service"
+else
+  echo "Chrome Remote Desktop が未登録のため、自動起動の設定はスキップ"
+fi
+
+step "デスクトップは Chrome Remote Desktop の仮想デスクトップ1つにする（画面の前の GNOME ログインは止める）"
+# 同じユーザーが GNOME と仮想デスクトップに同時に入ると、Chrome やセッションがぶつかる。
+# 手元で GNOME が要るときだけ `sudo systemctl start gdm` で一時的に起こす
+sudo systemctl set-default multi-user.target
 
 step "Docker（必要なときに使えるよう入れておく）"
 # 入手元は毎回今のリリース向けに書き直す（リリースアップグレードで外れても戻る）
@@ -165,6 +176,14 @@ cat > "$HOME/.config/autostart/chrome-keepalive.desktop" <<DESKTOP
 Type=Application
 Name=Chrome keepalive
 Exec=$HOME/.local/bin/chrome-keepalive
+OnlyShowIn=XFCE;
+DESKTOP
+# Chrome の cookie を開く鍵束（gnome-keyring）は、既定では XFCE で自動起動しない
+cat > "$HOME/.config/autostart/gnome-keyring-secrets-xfce.desktop" <<'DESKTOP'
+[Desktop Entry]
+Type=Application
+Name=GNOME Keyring (secrets)
+Exec=/usr/bin/gnome-keyring-daemon --start --components=secrets
 OnlyShowIn=XFCE;
 DESKTOP
 cat > "$HOME/.config/systemd/user/claude-rc.service" <<'UNIT'

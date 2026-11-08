@@ -9,7 +9,9 @@ Chrome で運行会社の公式サイトと予約サイトを見比べ、指定�
 
 ## Chrome の使い方
 
-- その環境にある Chrome の操作手段を使う（Claude in Chrome の `mcp__claude-in-chrome__*`、EC2 上の Chrome を操作するスキルなど）。
+- その環境にある Chrome の操作手段を使う（Claude in Chrome の `mcp__claude-in-chrome__*`、EC2 上の Chrome を CDP で操作する
+  `Ayato-kosaka/live-streaming` の `ec2-chrome` スキルなど）。CDP で操作するときは、画面の要素を JS で探して座標をクリックし、`innerText` を読む。
+  タブが応答しなくなったら Chrome を起動し直して続きから進める（取得済みの結果はファイルに貯め、済んだものは飛ばす形にする）
 - Bot 判定や確認画面が出たら、すり抜けようとしない。人が解けるならそれを待ち、解けなければ止めて報告する。
 
 ## 入力（足りなければ聞く）
@@ -29,6 +31,16 @@ Chrome で運行会社の公式サイトと予約サイトを見比べ、指定�
 3. **条件を控える**: 所要時間、乗換の有無と乗換地、国境の通過、荷物の個数・追加料金、支払い方法（現地通貨の現金のみ等）、
    ターミナル使用料など乗車時に払うもの。
 4. 運賃が現地通貨なら、その通貨のまま書き、円の目安を添える（換算レートも書く）。
+
+### サイトごとの開き方
+
+- **busticket4.me**（バルカンの多くの会社と FlixBus をまとめて出す。モンテネグロの会社は自社 e チケットで少し安い）:
+  `https://busticket4.me/en/bus-from-<出発>-to-<到着>`（例 `skopje-to-sofia`）を開き、ページ内の `departureDate=` を含むリンクの
+  日付（`DD-MM-YYYY`）を差し替えて開く。結果は「Buy from partner」「Buy Ticket」の区切りごとに1便。運行会社名はロゴの `alt`
+- **FlixBus 公式**: `https://global.flixbus.com/bus-routes/bus-<出発>-<到着>` の HTML にある最初の2つの UUID が出発・到着の都市 ID。
+  `https://shop.flixbus.de/search?departureCity=<ID>&arrivalCity=<ID>&rideDate=DD.MM.YYYY&adult=1&_locale=de` でユーロ表示になる
+  （`shop.flixbus.com` はドル表示）。提携会社の便は運行会社名が出る
+- curl などで直接取りに行くと断られるサイトが多い（busticket4.me は 403）。Chrome で開く
 
 ## 出力
 

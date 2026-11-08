@@ -113,7 +113,7 @@ GitHub Issues を SoT として、今日やるタスクを対話形式で決め�
 ├── templates/           # 型層：Issue・決定記録などのテンプレート
 ├── tools/               # 道具層：スキルや Actions から共通で呼ぶ自動化コード（gdrive 等）
 ├── CLAUDE.md            # AIエージェント向けの運用ルール（通知の方法など）
-├── .claude/skills/      # Claude Code スキル（invoice：請求書作成）
+├── .claude/skills/      # Claude Code スキル（invoice：請求書作成、flight/bus/hostel-search：旅程の価格調査 等）
 └── .github/             # GitHub Actions（github-message：Bot によるメッセージ代行／gdrive）
 ```
 

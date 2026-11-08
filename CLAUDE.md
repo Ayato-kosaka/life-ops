@@ -69,3 +69,6 @@ Claude Code（クラウド）のセッションには Google の認証情報を�
 
 - `.claude/skills/invoice/` — 請求書PDFの作成 → Google Drive 保存 → 通知
 - `.claude/skills/home-server/` — 常設PC（Ubuntu 24.04）の初期設定・点検・軽量化
+- `.claude/skills/flight-search/` — Chrome で Skyscanner と航空会社の公式サイトを見て航空券を調べる
+- `.claude/skills/bus-search/` — Chrome でバス・鉄道の公式サイトと予約サイトを見比べて陸路を調べる
+- `.claude/skills/hostel-search/` — Chrome で Google マップを使い、1名で泊まれる安いホステルを調べる

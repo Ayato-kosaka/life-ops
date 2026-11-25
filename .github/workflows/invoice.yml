@@ -31,7 +31,8 @@ env:
 
 jobs:
   build:
-    runs-on: ubuntu-latest
+    # Playwright 1.56 は ubuntu-latest（26.04）の依存を入れられないため、動作確認済みの 24.04 に固定する
+    runs-on: ubuntu-24.04
     steps:
       - uses: actions/checkout@v4
       - name: install playwright
